@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+
+	<head>
+		<meta charset="utf-8">
+
+		<title>Vagrant and You</title>
+
+		<meta name="description" content="A framework for easily creating beautiful presentations using HTML">
+		<meta name="author" content="Hakim El Hattab">
+
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<link rel="stylesheet" href="css/reveal.min.css">
+		<link rel="stylesheet" href="css/theme/solarized.css" id="theme">
+
+		<!-- For syntax highlighting -->
+		<link rel="stylesheet" href="lib/css/zenburn.css">
+
+		<!-- If the query includes 'print-pdf', include the PDF print sheet -->
+		<script>
+			if( window.location.search.match( /print-pdf/gi ) ) {
+				var link = document.createElement( 'link' );
+				link.rel = 'stylesheet';
+				link.type = 'text/css';
+				link.href = 'css/print/pdf.css';
+				document.getElementsByTagName( 'head' )[0].appendChild( link );
+			}
+		</script>
+
+		<!--[if lt IE 9]>
+		<script src="lib/js/html5shiv.js"></script>
+		<![endif]-->
+
+		<style type="text/css">
+			.reveal {
+  			font-size: 50px;
+			}
+		</style>
+
+	</head>
+
+	<body>
+
+		<div class="reveal">
+
+			<!-- Any section element inside of this container is displayed as a slide -->
+			<div class="slides">
+				<section>
+					<h1>Vagrant</h1>
+					<h3>(make your team happy)</h3>
+					<p>
+						<small><a href="https://github.com/tshelburne">Tim Shelburne</a> / <a href="http://twitter.com/timshelburne">@tshelburne</a></small>
+					</p>
+				</section>
+
+				<!-- Example of nested vertical slides -->
+				<section>
+					<section data-markdown>## What do we need?</section>
+
+					<section data-markdown>
+						## Sandboxed bootstrapping
+
+						No local libraries required
+					</section>
+					<section data-markdown>
+						## Destructive safety
+
+						A place to try new ideas
+					</section>
+					<section data-markdown>
+						## Unity of platform
+
+						`development` == `production`
+
+						This is a good thing
+					</section>
+					<section data-markdown>
+						## Simple workflow
+							
+						As few steps as possible between installation and working
+					</section>
+					<section data-markdown>
+						## Automation
+
+						One command, one place, can't mess it up
+					</section>
+					<section data-markdown>
+						## Dependency documentation
+
+						If it builds, it works
+					</section>
+					<section data-markdown>
+						## Immediate visibility
+
+						Sharing live pages without deploying to live pages
+					</section>
+				</section>
+
+				<section data-markdown>## What is Vagrant?</section>
+
+				<section>
+					<section data-markdown>## How does it work?</section>
+
+					<section data-markdown>
+						<script type='text/template'>
+							## An existing project is simple
+							
+							1. <!-- .element: class="fragment" --> `git clone [some-repo] && cd some-repo`
+							1. <!-- .element: class="fragment" --> `vagrant up`
+
+							<!-- .element: class="fragment" --> Um... done 
+						</script>
+					</section>
+					<section>
+						<h2>The Vagrantfile</h2>
+
+						In a file called 'Vagrantfile'...
+
+						<pre><code data-trim contenteditable>
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "precise32"
+  config.vm.box_url = "http://files.vagrantup.com/precise32.box"
+end
+						</code></pre>
+					</section>
+					<section>
+						<h2>Synced folders</h2>
+
+						Folders can be synced to the box from the host
+
+						<pre><code data-trim contenteditable>
+config.vm.synced_folder ".", "/vagrant"
+						</code></pre>
+					</section>
+					<section>
+						<h2>Provisioning</h2>
+
+						<pre><code data-trim contenteditable>
+# bootstrap.sh
+log Installing app dependencies
+cd /vagrant
+gem install bundler -v '= 1.5.1' # this is necessary to successfully bundle install, otherwise it stumbles on json gem
+bundle install --path=vendor --without production
+
+log Building database
+bin/rake db:migrate
+
+log Starting Rails server
+bin/rails s -d
+
+# Vagrantfile
+config.vm.provision 'shell', path: './bootstrap.sh'
+						</code></pre>
+					</section>
+					<section>
+						<h2>Port forwarding</h2>
+
+						<pre><code data-trim contenteditable>
+config.vm.network :forwarded_port, guest: 80, host: 8080
+config.vm.network :forwarded_port, guest: 443, host: 4430
+						</code></pre>
+					</section>
+					<section data-markdown>
+						## HTTP Sharing
+
+						`vagrant share` makes it available online
+
+						[It seems like magic...](http://docs.vagrantup.com/v2/share/)
+					</section>
+				</section>
+
+				<section>
+					<section data-markdown>## Problems...</section>
+
+					<section data-markdown>
+						<script type="text/template">
+							## `bundle install`
+
+							<!-- .element: class="fragment" --> Version problems - go for 1.5.1
+						</script>
+					</section>
+					<section>
+						<h2>Resource allocation</h2>
+
+						<p>Rails is a hungry, hungry hippo...</p>
+						<pre class="fragment"><code data-trim contenteditable>
+config.vm.provider "virtualbox" do |v|
+  cpus = `sysctl -n hw.ncpu`.to_i
+  mem = `sysctl -n hw.memsize`.to_i / 1024 / 1024 / 4
+  
+  v.customize ["modifyvm", :id, "--memory", mem]
+  v.customize ["modifyvm", :id, "--cpus", cpus]
+end
+						</code></pre>
+					</section>
+					<section data-markdown>
+						<script type="text/template">
+							## Additional repos
+
+							<!-- .element: class="fragment" --> Simple fix - `config.ssh.forward_agent = true`
+						</script>
+					</section>
+					<section data-markdown>
+						<script type="text/template">
+							## Speed
+
+							Rails is a *really* hungry, hungry hippo
+
+							- <!-- .element: class="fragment" --> NFS synced folders
+							- <!-- .element: class="fragment" --> `rsync-auto` synced folders
+							- <!-- .element: class="fragment" --> Alternative networking
+							- <!-- .element: class="fragment" --> Docker containers
+						</script>
+					</section>
+				</section>
+
+				<section>
+					<section data-markdown>## Tips and Tricks</section>
+
+					<section data-markdown>
+						## Full dev start
+
+						Live server, seeded db, the works
+					</section>
+					<section data-markdown>
+						## Provisioning sucks
+
+						Save your box and host it
+					</section>
+					<section data-markdown>
+						<script type="text/template">
+							## Provisioning logger
+
+							`log() { echo $'\n'VAGRANTFILE: $@...$'\n'; }`
+
+							- <!-- .element: class="fragment" --> `log Seeding the database`
+							- <!-- .element: class="fragment" --> `log Starting the server`
+						</script>
+					</section>
+					<section data-markdown>
+						## SSH drop-in
+
+						`echo "cd /vagrant" >> /home/vagrant/.bashrc`
+					</section>
+					<section data-markdown>
+						## Additional tools
+
+						- [Chef](http://docs.getchef.com/) / [Puppet](https://docs.puppetlabs.com/) / [Ansible](http://docs.ansible.com/)
+						- [Docker](https://docs.docker.com/)
+						- [AWS](http://www.iheavy.com/2014/01/16/how-to-deploy-on-amazon-ec2-with-vagrant/)
+
+					</section>
+				</section>
+
+				<section data-markdown>
+					# Questions?
+
+					Tim Shelburne | [github](https://github.com/tshelburne)
+				</section>
+
+			</div>
+
+		</div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.min.js"></script>
+
+		<script>
+
+			// Full list of configuration options available here:
+			// https://github.com/hakimel/reveal.js#configuration
+			Reveal.initialize({
+				controls: false,
+				progress: true,
+				history: true,
+				center: true,
+
+				theme: 'solarized', // available themes are in /css/theme
+				transition: 'linear', // default/cube/page/concave/zoom/linear/fade/none
+
+				// Parallax scrolling
+				// parallaxBackgroundImage: 'https://s3.amazonaws.com/hakim-static/reveal-js/reveal-parallax-1.jpg',
+				// parallaxBackgroundSize: '2100px 900px',
+
+				// Optional libraries used to extend on reveal.js
+				dependencies: [
+					{ src: 'lib/js/classList.js', condition: function() { return !document.body.classList; } },
+					{ src: 'plugin/markdown/marked.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/markdown/markdown.js', condition: function() { return !!document.querySelector( '[data-markdown]' ); } },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } },
+					{ src: 'plugin/zoom-js/zoom.js', async: true, condition: function() { return !!document.body.classList; } },
+					{ src: 'plugin/notes/notes.js', async: true, condition: function() { return !!document.body.classList; } }
+				]
+			});
+
+		</script>
+
+	</body>
+</html>
